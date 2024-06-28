@@ -129,5 +129,6 @@ def main():
 
 
 if __name__ == '__main__':
+    main()
     print(
         f'Проведена проверка отсутствия задач в активных сделках Битрикса от {datetime.datetime.today().strftime("%d.%m.%Y")}')
