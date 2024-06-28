@@ -1,6 +1,8 @@
 import datetime
 import time
 import os
+from pprint import pprint
+
 import requests
 from dotenv import load_dotenv
 
@@ -80,18 +82,17 @@ def assigned_user_info(deal_id) -> str or int:
     if assigned_by_id.status_code != 200:
         time.sleep(2)
         assigned_by_id = requests.post(WEBHOOK + 'crm.deal.get', json={"ID": deal_id})
-    return assigned_by_id.json()['result']
+    return assigned_by_id.json()['result']['ASSIGNED_BY_ID']
 
 
-def create_bitrix_task_os(deal_id):
+def create_bitrix_task(deal_id: str or int):
     """ Функция создающая задачу в сделке Битрикса.
      На вход принимает ID сделки, номер папки для скачивания и, при наличии, текст дополнительного комментария"""
     try:
         responsible_user = assigned_user_info(deal_id)
-        deal_link = f"https://trubexp.bitrix24.ru/crm/deal/details/{deal_id}/"
         data = {'fields': {
-            'TITLE': "Внимание! Активная сделка без задачи. Поставьте актуальную задачу или завершите сделку",
-            'DESCRIPTION': f"Сделка № {deal_id}. Ссылка на сделку: {deal_link}",
+            'TITLE': "Внимание! Активная сделка без задачи.",
+            'DESCRIPTION': f"Поставьте актуальную задачу или завершите сделку",
             'STATUS': 2,
             'CREATED_BY': 1,
             'RESPONSIBLE_ID': int(responsible_user),
@@ -99,10 +100,11 @@ def create_bitrix_task_os(deal_id):
             'DEADLINE': (datetime.datetime.now() + datetime.timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"),
             'UF_CRM_TASK': [f'D_{deal_id}']
         }}
-        response = requests.post(WEBHOOK + 'tasks.task.add', data)
+        response = requests.post(WEBHOOK + 'tasks.task.add', json=data)
         if response.status_code != 200:
             time.sleep(2)
-            requests.post(WEBHOOK + 'tasks.task.add', data)
+            response = requests.post(WEBHOOK + 'tasks.task.add', json=data)
+        return response.json()
     except Exception as ex:
         print('create_bitrix_task_os', ex)
 
@@ -117,14 +119,14 @@ def main():
         tasks = get_tasks_for_deal(deal_id)
 
         if not tasks:
-            create_bitrix_task_os(deal_id)
+            create_bitrix_task(deal_id)
             print(f'Создание новой задачи для сделки {deal_id} где не было задач')
         else:
             for task in tasks:
                 if task['status'] in active_statuses:
                     break
             else:
-                create_bitrix_task_os(deal_id)
+                create_bitrix_task(deal_id)
                 print(f'Создание новой задачи для сделки {deal_id} с завершенными задачами')
 
 
