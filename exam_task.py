@@ -123,7 +123,6 @@ def main():
             print(f'Создание новой задачи для сделки {deal_id} где не было задач')
         else:
             for task in tasks:
-                stat = task['status']
                 if task['status'] in active_statuses:
                     break
             else:
