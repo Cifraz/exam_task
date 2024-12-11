@@ -119,7 +119,7 @@ def main():
         tasks = get_tasks_for_deal(deal_id=deal_id)
 
         if not tasks:
-            # create_bitrix_task(deal_id)
+            create_bitrix_task(deal_id)
             print(f'Создание новой задачи для сделки {deal_id} где не было задач')
         else:
             for task in tasks:
@@ -128,7 +128,7 @@ def main():
                     print(deal_id)
                     break
             else:
-                # create_bitrix_task(deal_id)
+                create_bitrix_task(deal_id)
                 print(f'Создание новой задачи для сделки {deal_id} с завершенными задачами')
 
 
