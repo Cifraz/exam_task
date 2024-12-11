@@ -2,7 +2,6 @@ import datetime
 import time
 import os
 from pprint import pprint
-from turtledemo.penrose import start
 
 import requests
 from dotenv import load_dotenv
