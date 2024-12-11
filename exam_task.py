@@ -2,13 +2,13 @@ import datetime
 import time
 import os
 from pprint import pprint
+from turtledemo.penrose import start
 
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 WEBHOOK = os.getenv('WEBHOOK')
-
 
 def get_all_deal_info() -> list or str or None:
     """ Получение ID всех незакрытых сделок"""
@@ -44,15 +44,15 @@ def get_all_deal_info() -> list or str or None:
         return f'Ошибка при выполнении запроса', ex
 
 
-def get_tasks_for_deal(deal_id) -> list or str:
+def get_tasks_for_deal(deal_id=None, start=0) -> list or str:
     """Функция получает информацию о всех незавершенных задачах в сделке"""
     try:
         all_task_id = []
-        page_count = 0
         params = {
+            'start': start,
             'select': ['ID', 'TITLE', 'STATUS'],
             'filter': {
-                'UF_CRM_TASK': 'D_' + str(deal_id)
+                'UF_CRM_TASK': f"D_{deal_id}"
             }
         }
         task_response = requests.post(WEBHOOK + 'tasks.task.list', json=params)
@@ -63,9 +63,10 @@ def get_tasks_for_deal(deal_id) -> list or str:
         if task_pagination < 50:
             all_task_id.extend(task_response.json()['result']['tasks'])
         else:
-            while page_count < task_pagination:
-                page_count += 50
-                params.update({'start': page_count})
+            while start < task_pagination:
+                # page_count += 50
+                # params.update({'start': page_count})
+                start+=50
                 new_task_response = requests.post(WEBHOOK + 'tasks.task.list', json=params)
                 if new_task_response.status_code != 200:
                     time.sleep(2)
@@ -116,21 +117,24 @@ def main():
 
     for deal in all_deals:
         deal_id = deal['ID']
-        tasks = get_tasks_for_deal(deal_id)
+        tasks = get_tasks_for_deal(deal_id=deal_id)
 
         if not tasks:
-            create_bitrix_task(deal_id)
+            # create_bitrix_task(deal_id)
             print(f'Создание новой задачи для сделки {deal_id} где не было задач')
         else:
             for task in tasks:
+                stat = task['status']
                 if task['status'] in active_statuses:
+                    print(deal_id)
                     break
             else:
-                create_bitrix_task(deal_id)
+                # create_bitrix_task(deal_id)
                 print(f'Создание новой задачи для сделки {deal_id} с завершенными задачами')
 
 
 if __name__ == '__main__':
+    # print(get_tasks_for_deal(deal_id=60299))
     main()
     print(
         f'Проведена проверка отсутствия задач в активных сделках Битрикса от {datetime.datetime.today().strftime("%d.%m.%Y")}')
