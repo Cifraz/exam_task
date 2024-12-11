@@ -125,7 +125,6 @@ def main():
             for task in tasks:
                 stat = task['status']
                 if task['status'] in active_statuses:
-                    print(deal_id)
                     break
             else:
                 create_bitrix_task(deal_id)
