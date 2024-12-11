@@ -6,7 +6,7 @@ on:
       - master
 
 jobs:
-  deploy:
+  create-image:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,34 +18,51 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-
+          ssh-keyscan -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
       - name: Debug SSH key
         run: |
           ls -l ~/.ssh
-          cat ~/.ssh/id_rsa
           cat ~/.ssh/known_hosts
-
       - name: Create directory on server
         run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} 'mkdir -p ~/home/exam_task'
-
+          ssh -i ~/.ssh/id_rsa -p ${{ secrets.SERVER_PORT }} -o StrictHostKeyChecking=no ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} 'mkdir -p ~/home/exam_task/'
       - name: Copy files via SSH
         run: |
-          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -r ./* ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }}:~/home/exam_task/
-
+          scp -i ~/.ssh/id_rsa -P ${{ secrets.SERVER_PORT }} -o StrictHostKeyChecking=no -r ./* ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }}:~/home/exam_task/
       - name: SSH into server and build Docker image
         run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          ssh -i ~/.ssh/id_rsa -p ${{ secrets.SERVER_PORT }} -o StrictHostKeyChecking=no ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} << 'EOF'
             sudo apt update
             sudo apt install -y docker.io
             sudo systemctl start docker
             sudo systemctl enable docker
+            docker stop exam_task
+            docker rm exam_task
             cd ~/home/exam_task
             docker build -t exam_task:latest .
-            docker stop exam_task || true
-            docker rm exam_task || true
+          EOF
+
+  create-container:
+    needs: create-image
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Check Docker status
+        run: |
+          ssh -i ~/.ssh/id_rsa -p ${{ secrets.SERVER_PORT }} -o StrictHostKeyChecking=no ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} 'sudo systemctl status docker'
+
+
+      - name: SSH into server and build Docker image
+        run: |
+          ssh -t -i ~/.ssh/id_rsa -p ${{ secrets.SERVER_PORT }} -o StrictHostKeyChecking=no ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} << 'EOF'
             docker run -d --name exam_task \
-              -e WEBHOOK=${{ secrets.WEBHOOK }} \
-              -p 8010:8010 exam_task:latest
+            -e WEBHOOK=${{ secrets.WEBHOOK }} \
+            -p 8010:8010 exam_task:latest
           EOF
