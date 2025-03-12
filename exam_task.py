@@ -1,13 +1,10 @@
 import datetime
 import time
-import os
-from pprint import pprint
-
+from infisical_base import infisical_get_secret
 import requests
-from dotenv import load_dotenv
 
-load_dotenv()
-WEBHOOK = os.getenv('WEBHOOK')
+WEBHOOK = infisical_get_secret('WEBHOOK')
+
 
 def get_all_deal_info() -> list or str or None:
     """ Получение ID всех незакрытых сделок"""
@@ -65,7 +62,7 @@ def get_tasks_for_deal(deal_id=None, start=0) -> list or str:
             while start < task_pagination:
                 # page_count += 50
                 # params.update({'start': page_count})
-                start+=50
+                start += 50
                 new_task_response = requests.post(WEBHOOK + 'tasks.task.list', json=params)
                 if new_task_response.status_code != 200:
                     time.sleep(2)
@@ -132,6 +129,7 @@ def main():
 
 if __name__ == '__main__':
     # print(get_tasks_for_deal(deal_id=60299))
+    # TODO выяснить почему возникает ошибка при работе со сделкой
     main()
     print(
         f'Проведена проверка отсутствия задач в активных сделках Битрикса от {datetime.datetime.today().strftime("%d.%m.%Y")}')

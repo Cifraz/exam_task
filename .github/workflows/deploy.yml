@@ -63,6 +63,9 @@ jobs:
         run: |
           ssh -t -i ~/.ssh/id_rsa -p ${{ secrets.SERVER_PORT }} -o StrictHostKeyChecking=no ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} << 'EOF'
             docker run -d --name exam_task \
-            -e WEBHOOK=${{ secrets.WEBHOOK }} \
+            -e INFISICAL_ID=${{ secrets.INFISICAL_ID }} \
+            -e INFISICAL_SECRET=${{ secrets.INFISICAL_SECRET }} \
+            -e INFISICAL_HOST=${{ secrets.INFISICAL_HOST }} \
+            -e INFISICAL_PROJECT_ID=${{ secrets.INFISICAL_PROJECT_ID }} \
             -p 8010:8010 exam_task:latest
           EOF
