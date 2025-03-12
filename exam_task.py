@@ -139,13 +139,12 @@ def main():
 
 
 if __name__ == '__main__':
-    for index, row in enumerate(get_tasks_for_deal(deal_id='60299')):  # 62933 60299
-        if row['id'] == '167941':  # 150441
-            pprint([index, row['id']])
-        # pprint([index, row['id'], row['status']])
+    # for index, row in enumerate(get_tasks_for_deal(deal_id='60299')):  # 62933 60299
+    #     if row['id'] == '167941':  # 150441
+    #         pprint([index, row['id']])
+    #     pprint([index, row['id'], row['status']])
     # pprint(get_task_by_id('167941'))
     # pprint(get_tasks_for_deal(deal_id='60299'))
-    # TODO выяснить почему возникает ошибка при работе со сделкой
-    # main()
-    # print(
-    #     f'Проведена проверка отсутствия задач в активных сделках Битрикса от {datetime.datetime.today().strftime("%d.%m.%Y")}')
+    main()
+    print(
+        f'Проведена проверка отсутствия задач в активных сделках Битрикса от {datetime.datetime.today().strftime("%d.%m.%Y")}')
