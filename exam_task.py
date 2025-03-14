@@ -1,13 +1,12 @@
 import datetime
 import time
-import os
 from pprint import pprint
 
+from infisical_base import infisical_get_secret
 import requests
-from dotenv import load_dotenv
 
-load_dotenv()
-WEBHOOK = os.getenv('WEBHOOK')
+WEBHOOK = infisical_get_secret('WEBHOOK')
+
 
 def get_all_deal_info() -> list or str or None:
     """ Получение ID всех незакрытых сделок"""
@@ -43,37 +42,47 @@ def get_all_deal_info() -> list or str or None:
         return f'Ошибка при выполнении запроса', ex
 
 
-def get_tasks_for_deal(deal_id=None, start=0) -> list or str:
+def get_tasks_for_deal(deal_id, start=0) -> list or str:
     """Функция получает информацию о всех незавершенных задачах в сделке"""
+    all_task_id = []
+    params = {
+        'start': start,
+        'select': ['ID', 'TITLE', 'STATUS', 'UF_CRM_TASK'],
+        'filter': {'UF_CRM_TASK': f'd_{deal_id}'}
+    }
     try:
-        all_task_id = []
-        params = {
-            'start': start,
-            'select': ['ID', 'TITLE', 'STATUS'],
-            'filter': {
-                'UF_CRM_TASK': f"D_{deal_id}"
-            }
-        }
-        task_response = requests.post(WEBHOOK + 'tasks.task.list', json=params)
-        if task_response.status_code != 200:
-            time.sleep(2)
+        while True:
             task_response = requests.post(WEBHOOK + 'tasks.task.list', json=params)
-        task_pagination = task_response.json()['total']
-        if task_pagination < 50:
-            all_task_id.extend(task_response.json()['result']['tasks'])
-        else:
-            while start < task_pagination:
-                # page_count += 50
-                # params.update({'start': page_count})
-                start+=50
-                new_task_response = requests.post(WEBHOOK + 'tasks.task.list', json=params)
-                if new_task_response.status_code != 200:
-                    time.sleep(2)
-                    new_task_response = requests.post(WEBHOOK + 'tasks.task.list', json=params)
-                all_task_id.extend(new_task_response.json()['result']['tasks'])
+            if task_response.status_code != 200:
+                time.sleep(2)
+                task_response = requests.post(WEBHOOK + 'tasks.task.list', json=params)
+            task_data = task_response.json()
+            if 'result' in task_data and 'tasks' in task_data['result']:
+                all_task_id.extend(task_data['result']['tasks'])
+            else:
+                break
+            task_pagination = task_data.get('total', 0)
+            if len(all_task_id) >= task_pagination:
+                break
+            start += 50
+            params['start'] = start
         return all_task_id
     except Exception as ex:
-        return f'Ошибка при выполнении запроса', ex
+        return f'Ошибка при выполнении запроса: {ex}'
+
+
+def get_task_by_id(task_id, webhook=WEBHOOK):
+    """Функция находит задачу по ID"""
+    url = f"{webhook}tasks.task.get"
+    params = {"taskId": task_id,
+              "select": {
+                  'STATUS': 'STATUS',
+                  'UF_CRM_TASK': 'UF_CRM_TASK'
+              }
+              }
+    response = requests.post(url, json=params)
+    result = response.json()
+    return result
 
 
 def assigned_user_info(deal_id) -> str or int:
@@ -113,7 +122,6 @@ def main():
     """ Функция запускающая проверку наличия задач в активных сделках Битрикса"""
     all_deals = get_all_deal_info()
     active_statuses = ['2', '3', '4', '6']  # Список активных статусов
-
     for deal in all_deals:
         deal_id = deal['ID']
         tasks = get_tasks_for_deal(deal_id=deal_id)
@@ -131,7 +139,12 @@ def main():
 
 
 if __name__ == '__main__':
-    # print(get_tasks_for_deal(deal_id=60299))
+    # for index, row in enumerate(get_tasks_for_deal(deal_id='60299')):  # 62933 60299
+    #     if row['id'] == '167941':  # 150441
+    #         pprint([index, row['id']])
+    #     pprint([index, row['id'], row['status']])
+    # pprint(get_task_by_id('167941'))
+    # pprint(get_tasks_for_deal(deal_id='60299'))
     main()
     print(
         f'Проведена проверка отсутствия задач в активных сделках Битрикса от {datetime.datetime.today().strftime("%d.%m.%Y")}')
