@@ -15,6 +15,11 @@
 
 1) Проверка наличия активных сделок без задач в аккаунте [trubexp.bitrix24.ru](https://trubexp.bitrix24.ru/)
 
+## Start
+
+      pip install -r requirements.txt
+      python exam_task.py
+
 ## Modules
 
 - exam_task.py - Основной модуль проверяющий наличие активных сделок без задач и добавляющий задачи
